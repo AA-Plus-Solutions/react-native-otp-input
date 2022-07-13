@@ -37,6 +37,7 @@
   "include": [
     "./index.tsx",
     "./styles.ts",
-    "./index.d.ts"
+    "./index.d.ts",
+    "./helpers/*"
   ],
 }
