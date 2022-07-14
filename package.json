@@ -70,6 +70,7 @@
     "typescript": "^3.8.3"
   },
   "dependencies": {
-    "@react-native-community/clipboard": "^1.2.2"
+    "@react-native-community/clipboard": "^1.2.2",
+    "expo-clipboard": "^3.0.1"
   }
 }

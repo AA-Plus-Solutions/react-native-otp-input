@@ -18,7 +18,7 @@ export default class OTPInputView extends Component<InputProps, OTPInputViewStat
     getDigits: () => string[];
     private handleKeyboardDidHide;
     private notifyCodeChanged;
-    checkPinCodeFromClipBoard: () => void;
+    checkPinCodeFromClipBoard: () => Promise<void>;
     private handleChangeText;
     private handleKeyPressTextInput;
     focusField: (index: number) => void;
