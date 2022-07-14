@@ -2,11 +2,12 @@
 import { InputProps, OTPInputViewState } from '@twotalltotems/react-native-otp-input';
 import React, { Component } from 'react'
 import { View, TextInput, TouchableWithoutFeedback, Keyboard, Platform, I18nManager, EmitterSubscription, } from 'react-native'
-import Clipboard from '@react-native-community/clipboard';
+// import Clipboard from '@react-native-community/clipboard';
+import Clipboard from 'expo-clipboard'
 import styles from './styles'
 import { isAutoFillSupported } from './helpers/device'
 import { codeToArray } from './helpers/codeToArray'
-
+ 
 export default class OTPInputView extends Component<InputProps, OTPInputViewState> {
     static defaultProps: InputProps = {
         pinCount: 6,
@@ -19,13 +20,13 @@ export default class OTPInputView extends Component<InputProps, OTPInputViewStat
         placeholderCharacter: "",
         selectionColor: '#000',
     }
-
+ 
     private fields: TextInput[] | null[] = []
     private keyboardDidHideListener?: EmitterSubscription;
     private timer?: NodeJS.Timeout;
     private hasCheckedClipBoard?: boolean;
     private clipBoardCode?: string;
-
+ 
     constructor(props: InputProps) {
         super(props)
         const { code } = props
@@ -34,34 +35,34 @@ export default class OTPInputView extends Component<InputProps, OTPInputViewStat
             selectedIndex: props.autoFocusOnLoad ? 0 : -1,
         }
     }
-
+ 
     UNSAFE_componentWillReceiveProps(nextProps: InputProps) {
         const { code } = this.props
         if (nextProps.code !== code) {
             this.setState({ digits: codeToArray(nextProps.code) })
         }
     }
-
+ 
     componentDidMount() {
         this.copyCodeFromClipBoardOnAndroid()
         this.bringUpKeyBoardIfNeeded()
         this.keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', this.handleKeyboardDidHide)
     }
-
+ 
     componentWillUnmount() {
         if (this.timer) {
             clearInterval(this.timer)
         }
         this.keyboardDidHideListener?.remove()
     }
-
+ 
     private copyCodeFromClipBoardOnAndroid = () => {
         if (Platform.OS === "android") {
             this.checkPinCodeFromClipBoard()
             this.timer = setInterval(this.checkPinCodeFromClipBoard, 400)
         }
     }
-
+ 
     bringUpKeyBoardIfNeeded = () => {
         const { autoFocusOnLoad, pinCount } = this.props
         const digits = this.getDigits()
@@ -70,17 +71,17 @@ export default class OTPInputView extends Component<InputProps, OTPInputViewStat
             this.focusField(focusIndex)
         }
     }
-
+ 
     getDigits = () => {
         const { digits: innerDigits } = this.state
         const { code } = this.props
         return code === undefined ? innerDigits : code.split("")
     }
-
+ 
     private handleKeyboardDidHide = () => {
         this.blurAllFields()
     }
-
+ 
     private notifyCodeChanged = () => {
         const { digits } = this.state
         const code = digits.join("")
@@ -89,26 +90,45 @@ export default class OTPInputView extends Component<InputProps, OTPInputViewStat
             onCodeChanged(code)
         }
     }
-
-    checkPinCodeFromClipBoard = () => {
+ 
+    checkPinCodeFromClipBoard = async() => {
         const { pinCount, onCodeFilled } = this.props
         const regexp = new RegExp(`^\\d{${pinCount}}$`)
-        Clipboard.getString().then(code => {
-            if (this.hasCheckedClipBoard && regexp.test(code) && (this.clipBoardCode !== code)) {
-                this.setState({
-                    digits: code.split(""),
-                }, () => {
-                    this.blurAllFields()
-                    this.notifyCodeChanged()
-                    onCodeFilled && onCodeFilled(code)
-                })
+        if(Clipboard){
+            const code=await Clipboard.getStringAsync();
+            try{
+                if (this.hasCheckedClipBoard && regexp.test(code) && (this.clipBoardCode !== code)) {
+                    this.setState({
+                        digits: code.split(""),
+                    }, () => {
+                        this.blurAllFields()
+                        this.notifyCodeChanged()
+                        onCodeFilled && onCodeFilled(code)
+                    })
+                }
+                this.clipBoardCode = code
+                this.hasCheckedClipBoard = true
+            }catch(e){
+                console.log(e)
             }
-            this.clipBoardCode = code
-            this.hasCheckedClipBoard = true
-        }).catch(() => {
-        })
+        }
+       
+        // Clipboard.getString().then(code => {
+        //     if (this.hasCheckedClipBoard && regexp.test(code) && (this.clipBoardCode !== code)) {
+        //         this.setState({
+        //             digits: code.split(""),
+        //         }, () => {
+        //             this.blurAllFields()
+        //             this.notifyCodeChanged()
+        //             onCodeFilled && onCodeFilled(code)
+        //         })
+        //     }
+        //     this.clipBoardCode = code
+        //     this.hasCheckedClipBoard = true
+        // }).catch(() => {
+        // })
     }
-
+ 
     private handleChangeText = (index: number, text: string) => {
         const { onCodeFilled, pinCount } = this.props
         const digits = this.getDigits()
@@ -134,7 +154,7 @@ export default class OTPInputView extends Component<InputProps, OTPInputViewStat
             }
             this.setState({ digits: newdigits }, this.notifyCodeChanged)
         }
-
+ 
         let result = newdigits.join("")
         if (result.length >= pinCount) {
             onCodeFilled && onCodeFilled(result)
@@ -146,7 +166,7 @@ export default class OTPInputView extends Component<InputProps, OTPInputViewStat
             }
         }
     }
-
+ 
     private handleKeyPressTextInput = (index: number, key: string) => {
         const digits = this.getDigits()
         if (key === 'Backspace') {
@@ -156,7 +176,7 @@ export default class OTPInputView extends Component<InputProps, OTPInputViewStat
             }
         }
     }
-
+ 
     focusField = (index: number) => {
         if (index < this.fields.length) {
             (this.fields[index] as TextInput).focus();
@@ -165,22 +185,22 @@ export default class OTPInputView extends Component<InputProps, OTPInputViewStat
             })
         }
     }
-
+ 
     blurAllFields = () => {
         this.fields.forEach((field: TextInput | null) => (field as TextInput).blur())
         this.setState({
             selectedIndex: -1,
         })
     }
-
-
+ 
+ 
     clearAllFields = () => {
         const { clearInputs, code } = this.props;
         if (clearInputs && code === "") {
             this.setState({ digits: [], selectedIndex: 0 })
         }
     }
-
+ 
     renderOneInputField = (_: TextInput, index: number) => {
         const { codeInputFieldStyle, codeInputHighlightStyle, secureTextEntry, editable, keyboardType, selectionColor, keyboardAppearance } = this.props
         const { defaultTextFieldStyle } = styles
@@ -213,13 +233,13 @@ export default class OTPInputView extends Component<InputProps, OTPInputViewStat
             </View>
         )
     }
-
+ 
     renderTextFields = () => {
         const { pinCount } = this.props
         const array = new Array(pinCount).fill(0)
         return array.map(this.renderOneInputField)
     }
-
+ 
     render() {
         const { pinCount, style, clearInputs } = this.props
         const digits = this.getDigits()
@@ -250,3 +270,4 @@ export default class OTPInputView extends Component<InputProps, OTPInputViewStat
         );
     }
 }
+ 
